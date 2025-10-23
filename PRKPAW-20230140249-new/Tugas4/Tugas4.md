@@ -1,4 +1,4 @@
+![Teks Alternatif](checkini.png "Melakukan Checkout")
 ![Teks Alternatif](checkoutni.png "Melakukan Checkout")
-![Teks Alternatif](checkout.png "Melakukan Checkout")
 ![Teks Alternatif](database.png "Tampilan Database")
-![Teks Alternatif](reports.png "Menampilkan Reports")
+![Teks Alternatif](reportss.png "Menampilkan Reports")
