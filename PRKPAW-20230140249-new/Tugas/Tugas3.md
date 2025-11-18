@@ -1,0 +1,5 @@
+![Teks Alternatif](../ss/checkin.png "Melakukan Checkin")
+![Teks Alternatif](../ss/checkindua.png "Melakukan Checkin Dua Kali")
+![Teks Alternatif](../ss/checkout.png "Melakukan Checkout")
+![Teks Alternatif](../ss/checkoutdua.png "Melakukan Checkout Dua Kali")
+![Teks Alternatif](../ss/reports.png "Menampilkan Reports")

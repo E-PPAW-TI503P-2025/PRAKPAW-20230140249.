@@ -2,12 +2,12 @@
 # 📘 Dokumentasi Tugas
 
 1. **Tampilan Login**  
-   ![A](./login.png)
+   ![A](../ss/login.png)
 
 2. **Tampilan Register **  
-   ![B](./register.png)
+   ![B](../ss/register.png)
 
 3. **Tampilan Dashboard**  
-   ![C](./dashboard.png)
+   ![C](../ss/dashboard.png)
 
 

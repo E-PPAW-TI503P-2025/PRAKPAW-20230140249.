@@ -1,13 +1,13 @@
 # 📘 Dokumentasi Tugas
 
 1. **Tampilan Endpoint Create Book**  
-   ![A](./A.png)
+   ![A](../ss/A.png)
 
 2. **Tampilan Endpoint Read Book**  
-   ![B](./B.png)
+   ![B](../ss/B.png)
 
 3. **Tampilan Endpoint Update Book**  
-   ![C](./C.png)
+   ![C](../ss/C.png)
 
 4. **Tampilan Endpoint Delete Book**  
-   ![D](./D)
+   ![D](../ss/D.png)

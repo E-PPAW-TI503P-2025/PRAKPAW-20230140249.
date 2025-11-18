@@ -2,14 +2,14 @@
 # 📘 Dokumentasi Tugas
 
 1. **Tampilan Register Sebagai Mahasiswa**  
-   ![A](./Registrasi.png)
+   ![A](../ss/Registrasi.png)
 
 2. **Tampilan Register Sebagai Admin**  
-   ![B](./RegistrasiA.png)
+   ![B](.../ss/RegistrasiA.png)
 
 3. **Tampilan Login Sebagai Mahasiswa**  
-   ![C](./LoginM.png)
+   ![C](../ss/LoginM.png)
 
 4. **Tampilan Database**  
-   ![D](./DB.png)
+   ![D](../ss/DB.png)
 
