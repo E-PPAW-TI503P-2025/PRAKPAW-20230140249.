@@ -24,7 +24,7 @@ function DashboardPage() {
         </h1>
 
         <p className="text-gray-700 mb-8 text-sm font-medium border-t-2 border-b-2 border-gray-400 py-2">
-          USER ACCESS GRANTED. SELAMAT DATANG DI ANTARMUKA PENGGUNA.
+          SELAMAT DATANG DI DASHBOARD ANDA
         </p>
 
         {/* Grid Fitur - Menggunakan gaya "tombol" sistem lama */}
