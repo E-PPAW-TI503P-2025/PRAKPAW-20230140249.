@@ -1,34 +1,50 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Presensi extends Model {
-  
     static associate(models) {
-      // define association here
+      Presensi.belongsTo(models.User, {
+        foreignKey: "userId",
+        as: "user",
+        onDelete: "CASCADE",
+      });
     }
   }
-  Presensi.init({
-    userId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+
+  Presensi.init(
+    {
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      nama: {
+        type: DataTypes.STRING,
+        allowNull: false
+      },
+      checkIn: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      checkOut: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      latitude: {
+        type: DataTypes.DECIMAL(10, 8),
+        allowNull: true
+      },
+      longitude: {
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true
+      }
     },
-    nama: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    checkIn: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    checkOut: {
-      type: DataTypes.DATE,
-      allowNull: true, // Boleh null
+    {
+      sequelize,
+      modelName: "Presensi",
+      tableName: "Presensis", // sesuaikan jika tabel kamu bernama lain
     }
-  }, {
-    sequelize,
-    modelName: 'Presensi',
-  });
+  );
+
   return Presensi;
 };
