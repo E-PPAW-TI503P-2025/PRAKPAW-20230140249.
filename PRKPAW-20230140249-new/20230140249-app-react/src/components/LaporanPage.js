@@ -106,7 +106,7 @@ function LaporanPage() {
                             : 'bg-[#556b2f] border-[#1b5e20] hover:bg-[#33691e] active:border-0 active:mt-1'
                     }`}
                 >
-                    {isLoading ? '⏳ Mengambil Data...' : '🔄 Segarkan Buku Besar'}
+                    {isLoading ? '⏳ Mengambil Data...' : '🔄 Refresh'}
                 </button>
                 {error && (
                     <div className="bg-[#efebe9] border border-[#8d6e63] text-[#bf360c] p-3 shadow-inner font-mono text-sm" role="alert">
@@ -190,7 +190,7 @@ function LaporanPage() {
             </div>
             
             <footer className="mt-8 text-[#5d4037] text-xs font-mono opacity-60">
-                Laporan digenerate oleh Sistem Absensi Est. 2025
+                Laporan Sistem Absensi Est. 2025
             </footer>
         </div>
     );

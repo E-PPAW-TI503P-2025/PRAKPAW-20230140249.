@@ -13,5 +13,5 @@
 4. **Database**  
 ![C](../ss/DB2.png)
 
-4. **Endpoint Checkin**  
+5. **Endpoint Checkin**  
 ![C](../ss/tugas9.png)
