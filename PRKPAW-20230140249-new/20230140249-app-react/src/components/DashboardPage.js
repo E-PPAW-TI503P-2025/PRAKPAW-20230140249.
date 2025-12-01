@@ -1,156 +1,275 @@
-import React from 'react';
-// import { useNavigate } from 'react-router-dom'; // Asumsi navigate disediakan sebagai prop
+// Updated React component styled with "Vintage Brown/Sepia" theme
+// NOTE: Functional logic remains unchanged.
 
-// --------------------------------------------------------------------------
-// HELPER: DECODE TOKEN JWT (DIINTEGRASIKAN)
-// --------------------------------------------------------------------------
-const decodeToken = (token) => {
-    if (!token) return null;
-    try {
-        const base64Url = token.split('.')[1];
-        if (!base64Url) return null;
-        
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+import axios from 'axios';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import 'leaflet/dist/leaflet.css';
 
-        return JSON.parse(jsonPayload);
-    } catch (e) {
-        return null;
-    }
-};
+// --- LEAFLET ICON SETUP (UNCHANGED) ---
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
-// --------------------------------------------------------------------------
-// KOMPONEN NAVLINK (Dibutuhkan oleh Navbar)
-// --------------------------------------------------------------------------
-const NavLink = ({ navigate, path, currentPath, children }) => {
-    const isActive = currentPath === path;
-    return (
-        <span 
-            onClick={() => typeof navigate === 'function' && navigate(path)}
-            className={`px-3 py-2 text-sm font-bold uppercase cursor-pointer transition duration-150 
-                ${isActive 
-                    ? 'text-yellow-500 border-b-2 border-yellow-500' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
-                }`}
-        >
-            {children}
-        </span>
-    );
-};
+const API_URL = 'http://localhost:3001/api/presensi';
 
-// --------------------------------------------------------------------------
-// KOMPONEN NAVBAR (DIINTEGRASIKAN)
-// --------------------------------------------------------------------------
-function Navbar({ navigate, currentPath, userRole, userName }) {
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        if (typeof navigate === 'function') navigate('/login');
-    };
+function PresensiPage() {
+  const [coords, setCoords] = useState(null);
+  const [userName, setUserName] = useState('Pengguna');
+  const [userRole, setUserRole] = useState('');
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
-    return (
-        <nav className="bg-gray-900 text-white shadow-xl border-b-4 border-yellow-500 font-sans sticky top-0 z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    <span className="text-2xl font-extrabold tracking-wider text-yellow-500 uppercase">[SYSTEM]</span>
-                    <div className="flex items-center space-x-4">
-                        <NavLink navigate={navigate} path="/dashboard" currentPath={currentPath}>Dashboard</NavLink>
-                        <NavLink navigate={navigate} path="/presensi" currentPath={currentPath}>Presensi</NavLink>
-                        {userRole === 'admin' && (
-                            <NavLink navigate={navigate} path="/reports" currentPath={currentPath}>Laporan Admin</NavLink>
-                        )}
-                    </div>
-                    <div className="flex items-center space-x-4">
-                        <span className="text-sm font-medium text-amber-200 hidden md:block">Welcome, {userName}</span>
-                        <button onClick={handleLogout} className="py-1 px-3 bg-red-700 hover:bg-red-800 text-white text-sm font-bold uppercase rounded-none border-2 border-red-900 transition duration-150 transform hover:scale-[1.05]">Logout</button>
-                    </div>
-                </div>
-            </div>
-        </nav>
-    );
-}
-// ---------------------------------------------------------------------------------------
+  // --- LOGIC SECTION (UNCHANGED) ---
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  }, [navigate]);
 
-
-function DashboardPage({ navigate, currentPath }) {
-  // 1. Mengambil Token dan Payload Pengguna
-  const token = localStorage.getItem('token');
-  const userPayload = decodeToken(token); 
-  
-  // 2. Mendapatkan Role dan Nama
-  const userRole = userPayload?.role; 
-  const userName = userPayload?.nama || 'Pengguna';
-  
-  const handleNavigation = (path) => {
-    // Memastikan fungsi navigate ada sebelum dipanggil
-    if (typeof navigate === 'function') {
-      navigate(path);
+  const getLocation = () => {
+    setError(null);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) setError('Akses lokasi ditolak.');
+          else if (error.code === error.POSITION_UNAVAILABLE) setError('Informasi lokasi tidak tersedia.');
+          else setError('Gagal mendapatkan lokasi: ' + error.message);
+          setCoords(null);
+        }
+      );
     } else {
-      console.error(`Navigation function not available. Cannot navigate to ${path}`);
+      setError('Geolocation tidak didukung browser.');
+      setCoords(null);
     }
   };
 
-  // Render Navbar menggunakan komponen yang didefinisikan di atas
-  const renderNavbar = <Navbar navigate={navigate} currentPath={currentPath} userRole={userRole} userName={userName} />; 
+  const showTempMessage = (msg, isError = false) => {
+    if (isError) {
+      setError(msg);
+      setTimeout(() => setError(null), 5000);
+    } else {
+      setMessage(msg);
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
 
+  const handleCheckIn = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!coords) return showTempMessage('Lokasi belum didapatkan.', true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/checkin`,
+        { latitude: coords.lat, longitude: coords.lng },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showTempMessage(response.data.message || 'Check-in Berhasil!');
+    } catch (err) {
+      showTempMessage(err.response ? err.response.data.message : 'Check-in gagal.', true);
+    }
+  };
+
+  const handleCheckOut = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!coords) return showTempMessage('Lokasi belum didapatkan.', true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/checkout`,
+        { latitude: coords.lat, longitude: coords.lng },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showTempMessage(response.data.message || 'Check-out Berhasil!');
+    } catch (err) {
+      showTempMessage(err.response ? err.response.data.message : 'Check-out gagal.', true);
+    }
+  };
+
+  const handleViewPresensi = () => navigate('/laporan');
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return handleLogout();
+
+    try {
+      const decoded = jwtDecode(token);
+      setUserName(decoded.nama || 'Pengguna');
+      setUserRole(decoded.role || 'mahasiswa');
+      if (decoded.exp * 1000 < Date.now()) handleLogout();
+    } catch (err) {
+      handleLogout();
+    }
+
+    getLocation();
+  }, [handleLogout]);
+
+  // --- RENDER SECTION (VINTAGE BROWN STYLE) ---
   return (
-    <div className="min-h-screen bg-amber-100 font-sans">
-      {renderNavbar}
-      <div className="flex items-center justify-center p-8">
-        
-        {/* Kontainer Utama - Kotak Tegas */}
-        <div className="bg-white border-4 border-gray-800 p-10 rounded-none shadow-xl text-center w-full max-w-lg">
+    <div
+      className="min-h-screen w-full flex flex-col items-center p-4 font-serif"
+      style={{
+        backgroundColor: "#e8dec0", // Warna dasar kertas usang
+        backgroundImage: "radial-gradient(#d4c5a3 2px, transparent 2px)", // Pola titik halus
+        backgroundSize: "30px 30px"
+      }}
+    >
+      {/* Header Vintage */}
+      <header className="w-full max-w-xl flex justify-between items-center py-5 px-2 mb-4 border-b-2 border-[#5d4037] border-double">
+        <h1 className="text-3xl font-bold text-[#3e2723] tracking-wider uppercase" style={{ textShadow: "1px 1px 0px #a1887f" }}>
+          📜 Absensi 
+        </h1>
+        <button
+          onClick={handleLogout}
+          className="py-1 px-4 text-sm bg-[#5d4037] text-[#efebe9] font-semibold border border-[#3e2723] shadow-md hover:bg-[#3e2723] transition rounded-sm"
+        >
+          Keluar
+        </button>
+      </header>
 
-          {/* Judul Dashboard */}
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-6 tracking-wider uppercase">
-            [ SYSTEM DASHBOARD ]
-          </h1>
+      {/* Kartu Utama: Efek Kertas */}
+      <div 
+        className="p-8 w-full max-w-xl space-y-6 relative shadow-xl"
+        style={{
+          backgroundColor: "#fcf5e5",
+          border: "1px solid #d7ccc8",
+          boxShadow: "10px 10px 0px rgba(93, 64, 55, 0.2)", // Shadow kasar ala retro
+        }}
+      >
+        {/* Hiasan Sudut (Corner accents) */}
+        <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#8d6e63]"></div>
+        <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#8d6e63]"></div>
+        <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#8d6e63]"></div>
+        <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#8d6e63]"></div>
 
-          {/* Sapaan Personal Berdasarkan Role */}
-          <p className="text-gray-700 mb-8 text-sm font-medium border-t-2 border-b-2 border-gray-400 py-2">
-            SELAMAT DATANG, {userName.toUpperCase()} ({userRole ? userRole.toUpperCase() : 'USER'}).
-          </p>
-
-          {/* Grid Fitur - Conditional Rendering */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-
-            {/* Item 1: Presensi (Wajib untuk semua role) */}
-            <div 
-              onClick={() => handleNavigation('/presensi')}
-              className="bg-blue-600 text-white p-4 rounded-none shadow-md border-2 border-gray-900 font-bold uppercase cursor-pointer transition duration-150 transform hover:scale-[1.02] active:translate-y-0.5"
-            >
-              LAKUKAN PRESENSI
-            </div>
-
-            {/* Item 2: Laporan/Riwayat (Conditional Rendering) */}
-            {userRole === 'admin' ? (
-                // Tampilan untuk ADMIN
-                <div 
-                    onClick={() => handleNavigation('/reports/daily')}
-                    className="bg-red-600 text-white p-4 rounded-none shadow-md border-2 border-gray-900 font-bold uppercase cursor-pointer transition duration-150 transform hover:scale-[1.02] active:translate-y-0.5"
-                >
-                    LIHAT LAPORAN (ADMIN)
-                </div>
-            ) : (
-                // Tampilan untuk MAHASISWA
-                <div ></div>
-                   
-                  
-               
-            )}
-
-           
-
-     
-
-          </div>
-          
+        <div className="pb-4 border-b border-[#a1887f] border-dashed">
+          <h2 className="text-2xl font-bold text-[#4e342e]">Selamat Datang, {userName}.</h2>
+          <p className="text-sm text-[#795548] italic mt-1 font-mono">Status Pengguna: {userRole}</p>
         </div>
+
+        {/* Notifikasi ala Mesin Ketik */}
+        {message && (
+          <div className="bg-[#e0e8d3] border border-[#556b2f] text-[#33691e] p-3 shadow-inner font-mono text-sm">
+            <p><strong>[SUKSES]:</strong> {message}</p>
+          </div>
+        )}
+        {error && (
+          <div className="bg-[#efebe9] border border-[#8d6e63] text-[#bf360c] p-3 shadow-inner font-mono text-sm">
+            <p><strong>[ERROR]:</strong> {error}</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-[#3e2723] flex items-center border-l-4 border-[#8d6e63] pl-2">
+            📍 Koordinat Lokasi
+            <button onClick={getLocation} className="ml-3 text-sm text-[#5d4037] underline hover:text-[#3e2723] italic font-normal">
+              (Perbarui Peta)
+            </button>
+          </h3>
+
+          {coords ? (
+            <p className="text-sm text-[#33691e] font-mono bg-[#dce775] bg-opacity-20 p-2 inline-block border border-[#cddc39]">
+              Lat: {coords.lat.toFixed(5)}, Lng: {coords.lng.toFixed(5)}
+            </p>
+          ) : (
+            <p className="text-sm text-[#bf360c] font-mono bg-[#ffccbc] bg-opacity-20 p-2 inline-block border border-[#ffab91]">
+              Menunggu sinyal lokasi...
+            </p>
+          )}
+
+          {coords && (
+            <div
+              className="p-2 shadow-inner bg-[#d7ccc8]"
+              style={{ border: "2px solid #5d4037" }}
+            >
+              {/* Filter Sepia pada Map agar terlihat kuno */}
+              <div className="overflow-hidden h-[200px] w-full" style={{ filter: "sepia(70%) contrast(110%)" }}>
+                <MapContainer
+                  key={`${coords.lat}-${coords.lng}`}
+                  center={[coords.lat, coords.lng]}
+                  zoom={17}
+                  scrollWheelZoom={false}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer 
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                  />
+                  <Marker position={[coords.lat, coords.lng]}>
+                    <Popup>Lokasi Anda</Popup>
+                  </Marker>
+                </MapContainer>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tombol Aksi Klasik */}
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#a1887f] border-dashed">
+          <button
+            onClick={handleCheckIn}
+            disabled={!coords}
+            className={`py-3 px-4 text-[#efebe9] font-bold shadow uppercase tracking-widest transition-all ${
+              coords 
+                ? 'bg-[#556b2f] hover:bg-[#33691e] border-b-4 border-[#1b5e20] active:border-0 active:mt-1' 
+                : 'bg-[#a1887f] cursor-not-allowed opacity-50'
+            }`}
+          >
+            Check (In)
+          </button>
+
+          <button
+            onClick={handleCheckOut}
+            disabled={!coords}
+            className={`py-3 px-4 text-[#efebe9] font-bold shadow uppercase tracking-widest transition-all ${
+              coords 
+                ? 'bg-[#8d6e63] hover:bg-[#5d4037] border-b-4 border-[#3e2723] active:border-0 active:mt-1' 
+                : 'bg-[#a1887f] cursor-not-allowed opacity-50'
+            }`}
+          >
+            Check (Out)
+          </button>
+        </div>
+
+        {userRole === 'admin' && (
+          <div className="pt-2">
+            <button
+              onClick={handleViewPresensi}
+              className="w-full py-2 px-4 bg-[#ffecb3] text-[#5d4037] font-bold border-2 border-[#5d4037] hover:bg-[#ffe082] transition shadow-sm uppercase text-sm"
+            >
+              📂 Laporan
+            </button>
+          </div>
+        )}
       </div>
+      
+      <footer className="mt-8 text-[#5d4037] text-xs font-mono opacity-60">
+        Sistem Absensi Est. 2025
+      </footer>
     </div>
   );
 }
 
-export default DashboardPage;
+export default PresensiPage;

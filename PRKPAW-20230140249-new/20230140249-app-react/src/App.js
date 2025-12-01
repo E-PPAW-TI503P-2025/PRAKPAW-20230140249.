@@ -1,49 +1,27 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import LoginPage from "./components/LoginPage";
-import RegisterPage from "./components/RegisterPage";
-import DashboardPage from "./components/DashboardPage";
-import PresensiPage from "./components/PresensiPage";
-import ReportPage from "./components/ReportPage";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import 'leaflet/dist/leaflet.css';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import DashboardPage from './components/DashboardPage';
+import PresensiPage from './components/PresensiPage';
+import LaporanPage from './components/LaporanPage';
 
-function Wrapper() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
+function App() {
   return (
-    <Routes>
+    <Router>
+      <div>
 
-      {/* ➤➤ TAMBAHKAN ROUTE INI DI SINI */}
-      <Route path="/" element={<LoginPage />} />
-      {/* ➤➤ SELESAI */}
-
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-
-      <Route
-        path="/dashboard"
-        element={<DashboardPage navigate={navigate} currentPath={location.pathname} />}
-      />
-
-      <Route
-        path="/presensi"
-        element={<PresensiPage navigate={navigate} />}
-      />
-
-      <Route
-        path="/reports"
-        element={<ReportPage navigate={navigate} />}
-      />
-
-      {/* ➤➤ OPTIONAL: SUPAYA SEMUA ROUTE YANG TIDAK TERDAFTAR MASUK KE LOGIN */}
-      <Route path="*" element={<LoginPage />} />
-    </Routes>
+        <Routes>
+          <Route path="/" element={<Navigate  to="/login" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/Presensi" element={<PresensiPage />} />
+          <Route path="/Laporan" element={<LaporanPage />} /> 
+        </Routes>
+      </div>
+    </Router>
   );
 }
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Wrapper />
-    </BrowserRouter>
-  );
-}
+export default App;

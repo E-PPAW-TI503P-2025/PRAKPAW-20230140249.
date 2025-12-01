@@ -1,50 +1,58 @@
 'use strict';
-const { Model } = require('sequelize');
-
+const {
+  Model
+} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Presensi extends Model {
     static associate(models) {
+      // Definisi Relasi: Setiap Presensi dimiliki oleh satu User
       Presensi.belongsTo(models.User, {
-        foreignKey: "userId",
-        as: "user",
-        onDelete: "CASCADE",
+        foreignKey: 'userId', 
+        as: 'User' // Diubah dari 'user' menjadi 'User' agar konsisten dengan konvensi Sequelize/Node.js (PascalCase untuk Model)
       });
     }
-  }
 
-  Presensi.init(
-    {
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-      nama: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      checkIn: {
-        type: DataTypes.DATE,
-        allowNull: false,
-      },
-      checkOut: {
-        type: DataTypes.DATE,
-        allowNull: true,
-      },
-      latitude: {
+  }
+  Presensi.init({
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+
+    checkIn: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    checkOut: {
+      type: DataTypes.DATE,
+      allowNull: true, 
+    },
+    
+    // ✅ PERBAIKAN: Kolom Lokasi Masuk
+    latitude_in: { 
         type: DataTypes.DECIMAL(10, 8),
         allowNull: true
-      },
-      longitude: {
-        type: DataTypes.DECIMAL(11, 8),
-        allowNull: true
-      }
     },
-    {
-      sequelize,
-      modelName: "Presensi",
-      tableName: "Presensis", // sesuaikan jika tabel kamu bernama lain
-    }
-  );
+    longitude_in: { 
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true 
+    },
 
+    // ✅ PERBAIKAN: Kolom Lokasi Keluar
+    latitude_out: { 
+        type: DataTypes.DECIMAL(10, 8),
+        allowNull: true
+    },
+    longitude_out: { 
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true 
+    },
+ 
+  }, {
+    sequelize,
+    modelName: 'Presensi',
+    
+  },
+  );
   return Presensi;
 };
