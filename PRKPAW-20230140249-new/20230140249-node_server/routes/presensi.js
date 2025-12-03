@@ -17,8 +17,8 @@ const validatePresensiUpdate = [
 ];
 
 // === ROUTES ===
-router.post("/checkin", authenticateToken, presensiController.CheckIn);
-router.post("/checkout", authenticateToken, presensiController.CheckOut);
+router.post('/checkin', [authenticateToken, presensiController.upload.single('image')], presensiController.CheckIn);
+router.post('/checkout', [authenticateToken, presensiController.upload.single('image')], presensiController.CheckOut);
 router.get("/", authenticateToken, isAdmin, presensiController.getAllPresensi);
 router.put("/:id", authenticateToken, isAdmin, validatePresensiUpdate, presensiController.updatePresensi);
 router.delete("/:id", authenticateToken, isAdmin, presensiController.deletePresensi);

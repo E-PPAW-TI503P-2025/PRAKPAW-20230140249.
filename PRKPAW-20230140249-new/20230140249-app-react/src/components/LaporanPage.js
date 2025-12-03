@@ -5,23 +5,55 @@ import { jwtDecode } from 'jwt-decode';
 
 const API_URL = 'http://localhost:3001/api/presensi';
 
+// 1. GANTI BASE URL JADI ROOT SERVER SAJA (HAPUS 'uploads/' DI SINI)
+const SERVER_URL = 'http://localhost:3001/'; 
+
 function LaporanPage() {
     const [laporan, setLaporan] = useState([]);
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    // Fungsi untuk memformat tanggal
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleString('id-ID', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
         });
+    };
+
+    // --- 2. FUNGSI PINTAR UNTUK URL GAMBAR ---
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        
+        // Bersihkan backslash (\) jadi slash (/) untuk kompatibilitas Windows
+        let cleanPath = imagePath.replace(/\\/g, '/');
+
+        // Hapus slash di depan jika ada (misal: /uploads/... jadi uploads/...)
+        if (cleanPath.startsWith('/')) {
+            cleanPath = cleanPath.substring(1);
+        }
+
+        // LOGIKA UTAMA: Cek apakah path sudah mengandung 'uploads/'
+        if (cleanPath.startsWith('uploads/')) {
+            // Jika SUDAH ADA 'uploads', jangan ditambah lagi. Langsung tempel ke SERVER_URL
+            // Hasil: http://localhost:3001/uploads/file.jpg
+            return `${SERVER_URL}${cleanPath}`;
+        } else {
+            // Jika BELUM ADA (cuma nama file), baru kita tambahkan 'uploads/'
+            // Hasil: http://localhost:3001/uploads/file.jpg
+            return `${SERVER_URL}uploads/${cleanPath}`;
+        }
+    };
+
+    const renderLocation = (lat, long) => {
+        if (!lat || !long) return <span className="text-gray-400">-</span>;
+        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${long}`;
+        return (
+            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#1a237e] hover:underline font-mono text-[10px]">
+                <span>{parseFloat(lat).toFixed(5)}, {parseFloat(long).toFixed(5)}</span>
+            </a>
+        );
     };
 
     const fetchLaporan = async () => {
@@ -29,169 +61,86 @@ function LaporanPage() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token'); 
-            
-            // Verifikasi role (opsional, tapi disarankan untuk halaman admin)
-            if (!token) {
-                 navigate('/login');
-                 return;
-            }
-            const decoded = jwtDecode(token);
-            if (decoded.role !== 'admin') {
-                setError('Akses ditolak. Anda bukan Administrator.');
-                setIsLoading(false);
-                return;
-            }
+            if (!token) { navigate('/login'); return; }
 
-            const response = await axios.get(
-                API_URL,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                } 
-            );
-            setLaporan(response.data.presensi); 
-            setError(null);
+            const response = await axios.get(API_URL, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = response.data.presensi || response.data.data || [];
+            setLaporan(data); 
         } catch (err) {
-            setError(err.response ? err.response.data.message : 'Gagal mengambil laporan presensi');
-            setLaporan([]);
+            setError(err.response ? err.response.data.message : 'Gagal mengambil data');
         } finally {
             setIsLoading(false);
         }
     };
     
-    // Auto-fetch data saat halaman dimuat
-    useEffect(() => {
-        // Cek token dan fetch data saat komponen dimuat
-        const token = localStorage.getItem('token');
-        if (token) {
-            fetchLaporan();
-        } else {
-            navigate('/login');
-        }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+    useEffect(() => { fetchLaporan(); }, []); 
 
     return (
-        <div 
-            className="min-h-screen flex flex-col items-center py-10 px-4 font-serif"
-            style={{
-                backgroundColor: "#e8dec0", // Warna dasar kertas usang
-                backgroundImage: "radial-gradient(#d4c5a3 2px, transparent 2px)", // Pola titik halus
-                backgroundSize: "30px 30px"
-            }}
-        >
+        <div className="min-h-screen flex flex-col items-center py-10 px-4 font-serif"
+            style={{ backgroundColor: "#e8dec0", backgroundImage: "radial-gradient(#d4c5a3 2px, transparent 2px)", backgroundSize: "30px 30px" }}>
             
-            {/* Header dan Navigasi */}
-            <header className="w-full max-w-5xl flex justify-between items-center mb-6 border-b-2 border-[#5d4037] pb-4 border-double">
-                <h2 className="text-3xl font-bold text-[#3e2723] uppercase tracking-widest" style={{ textShadow: "1px 1px 0px #a1887f" }}>
-                    📂 Laporan
-                </h2>
-                <Link 
-                    to="/dashboard"
-                    className="py-2 px-4 bg-[#5d4037] text-[#efebe9] font-semibold border border-[#3e2723] rounded-sm shadow-md hover:bg-[#3e2723] transition uppercase text-xs tracking-wider"
-                >
-                    &larr; Kembali ke Dashboard
-                </Link>
+            <header className="w-full max-w-7xl flex justify-between items-center mb-6 border-b-2 border-[#5d4037] pb-4 border-double">
+                <h2 className="text-3xl font-bold text-[#3e2723] uppercase">📂 Laporan Presensi</h2>
+                <Link to="/dashboard" className="py-2 px-4 bg-[#5d4037] text-[#efebe9] font-semibold border border-[#3e2723] rounded-sm hover:bg-[#3e2723] text-xs">← Dashboard</Link>
             </header>
 
-            {/* Kontrol Aksi dan Feedback */}
-            <div className="w-full max-w-5xl mb-6 flex justify-between items-center">
-                <button 
-                    onClick={fetchLaporan} 
-                    disabled={isLoading}
-                    className={`px-6 py-2 font-bold text-[#efebe9] rounded-sm shadow border-b-4 transition uppercase tracking-wider text-sm ${
-                        isLoading 
-                            ? 'bg-[#a1887f] border-[#8d6e63] cursor-wait' 
-                            : 'bg-[#556b2f] border-[#1b5e20] hover:bg-[#33691e] active:border-0 active:mt-1'
-                    }`}
-                >
-                    {isLoading ? '⏳ Mengambil Data...' : '🔄 Refresh'}
+            <div className="w-full max-w-7xl mb-6">
+                <button onClick={fetchLaporan} disabled={isLoading} className="px-6 py-2 bg-[#556b2f] text-[#efebe9] font-bold rounded-sm shadow hover:bg-[#33691e]">
+                    {isLoading ? '⏳ Loading...' : '🔄 Refresh Data'}
                 </button>
-                {error && (
-                    <div className="bg-[#efebe9] border border-[#8d6e63] text-[#bf360c] p-3 shadow-inner font-mono text-sm" role="alert">
-                        <p className="font-bold">[PERINGATAN]: {error}</p>
-                    </div>
-                )}
             </div>
 
-            {/* Container Tabel Laporan (Efek Kertas Ledger) */}
-            <div 
-                className="w-full max-w-5xl p-8 relative shadow-2xl"
-                style={{
-                    backgroundColor: "#fcf5e5",
-                    border: "1px solid #d7ccc8",
-                    boxShadow: "8px 8px 0px rgba(93, 64, 55, 0.2)",
-                }}
-            >
-                {/* Hiasan Sudut (Corner accents) */}
-                <div className="absolute top-2 left-2 w-6 h-6 border-t-4 border-l-4 border-[#8d6e63]"></div>
-                <div className="absolute top-2 right-2 w-6 h-6 border-t-4 border-r-4 border-[#8d6e63]"></div>
-                <div className="absolute bottom-2 left-2 w-6 h-6 border-b-4 border-l-4 border-[#8d6e63]"></div>
-                <div className="absolute bottom-2 right-2 w-6 h-6 border-b-4 border-r-4 border-[#8d6e63]"></div>
-
+            <div className="w-full max-w-7xl p-8 relative shadow-2xl bg-[#fcf5e5] border border-[#d7ccc8]">
                 <div className="overflow-x-auto border border-[#a1887f]">
-                    {laporan.length === 0 && !isLoading && !error ? (
-                        <p className="text-center text-[#795548] py-10 font-mono italic">-- Kosong: Tidak ada data ditemukan --</p>
-                    ) : (
-                        <table className="min-w-full divide-y divide-[#a1887f]">
-                            {/* Header Tabel */}
-                            <thead className="bg-[#d7ccc8]">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-[#3e2723] uppercase tracking-widest border-r border-[#a1887f]">
-                                        No.
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-[#3e2723] uppercase tracking-widest border-r border-[#a1887f]">
-                                        Nama 
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-[#3e2723] uppercase tracking-widest border-r border-[#a1887f]">
-                                        Waktu Masuk
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-[#3e2723] uppercase tracking-widest border-r border-[#a1887f]">
-                                        Waktu Keluar
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-[#3e2723] uppercase tracking-widest">
-                                        Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            
-                            {/* Isi Tabel */}
-                            <tbody className="bg-[#fcf5e5] divide-y divide-[#d7ccc8] font-mono text-sm">
-                                {laporan.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-[#efebe9] transition duration-100 text-[#4e342e]">
-                                        <td className="px-6 py-4 whitespace-nowrap border-r border-[#d7ccc8]">
-                                            {index + 1}.
+                    <table className="min-w-full divide-y divide-[#a1887f]">
+                        <thead className="bg-[#d7ccc8]">
+                            <tr>
+                                <th className="px-4 py-3 text-left font-bold text-[#3e2723]">No</th>
+                                <th className="px-4 py-3 text-left font-bold text-[#3e2723]">Nama</th>
+                                <th className="px-4 py-3 text-center font-bold text-[#3e2723]">Foto</th>
+                                <th className="px-4 py-3 text-left font-bold text-[#3e2723]">Masuk</th>
+                                <th className="px-4 py-3 text-left font-bold text-[#3e2723]">Lokasi</th>
+                                <th className="px-4 py-3 text-left font-bold text-[#3e2723]">Keluar</th>
+                                <th className="px-4 py-3 text-left font-bold text-[#3e2723]">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#d7ccc8] text-xs text-[#4e342e]">
+                            {laporan.map((item, index) => {
+                                // 3. PANGGIL FUNGSI DI SINI
+                                const finalImageUrl = getImageUrl(item.buktiFoto);
+
+                                return (
+                                    <tr key={index} className="hover:bg-[#efebe9]">
+                                        <td className="px-4 py-4 border-r border-[#d7ccc8]">{index + 1}.</td>
+                                        <td className="px-4 py-4 font-bold border-r border-[#d7ccc8]">{item.User?.nama || 'User'}</td>
+                                        
+                                        {/* TAMPILKAN FOTO */}
+                                        <td className="px-4 py-2 border-r border-[#d7ccc8] text-center">
+                                            {finalImageUrl ? (
+                                                <a href={finalImageUrl} target="_blank" rel="noreferrer">
+                                                    <img 
+                                                        src={finalImageUrl} 
+                                                        alt="Bukti" 
+                                                        className="w-16 h-12 object-cover rounded border-2 border-[#8d6e63] hover:scale-150 transition-transform mx-auto"
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/50?text=Error"; }} 
+                                                    />
+                                                </a>
+                                            ) : <span className="text-gray-400 italic">No Image</span>}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap font-bold border-r border-[#d7ccc8]">
-                                            {item.User ? item.User.nama : 'Data Terhapus'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-[#33691e] border-r border-[#d7ccc8]">
-                                            {formatDate(item.checkIn)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap border-r border-[#d7ccc8]">
-                                            {item.checkOut ? (
-                                                <span className="text-[#bf360c]">{formatDate(item.checkOut)}</span>
-                                            ) : (
-                                                <span className="px-2 py-1 inline-flex text-xs leading-5 font-bold border border-[#f9a825] text-[#e65100] uppercase tracking-wider bg-[#fff9c4]">
-                                                    Aktif
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap italic text-[#5d4037]">
-                                            {item.checkOut ? '[SELESAI]' : '[BERJALAN]'}
-                                        </td>
+
+                                        <td className="px-4 py-4 border-r border-[#d7ccc8] text-[#33691e]">{formatDate(item.checkIn)}</td>
+                                        <td className="px-4 py-4 border-r border-[#d7ccc8]">{renderLocation(item.latitude_in, item.longitude_in)}</td>
+                                        <td className="px-4 py-4 border-r border-[#d7ccc8] text-[#bf360c]">{item.checkOut ? formatDate(item.checkOut) : 'Aktif'}</td>
+                                        <td className="px-4 py-4 italic">{item.checkOut ? 'Selesai' : 'Berjalan'}</td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
-            <footer className="mt-8 text-[#5d4037] text-xs font-mono opacity-60">
-                Laporan Sistem Absensi Est. 2025
-            </footer>
         </div>
     );
 }

@@ -4,7 +4,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const app = express();
 const PORT = 3001;
-
+const path = require('path'); 
 // Routers
 const booksRouter = require('./routes/books');
 const presensiRoutes = require("./routes/presensi");
@@ -15,6 +15,7 @@ const authRoutes = require("./routes/auth");
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev")); // Logger yang lebih detail
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Custom logger middleware
 app.use((req, res, next) => {
